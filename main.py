@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtGui import QIcon
 
 from expense_app.repository import ExpenseRepository, StorageError
 from expense_app.service import ExpenseService
@@ -17,6 +18,7 @@ def main(argv=None):
     parser.add_argument("--db", type=Path, default=DEFAULT_DB, help="SQLite 文件路径，默认项目 data/expenses.sqlite3")
     args = parser.parse_args(argv)
     app = QApplication(sys.argv[:1])
+    app.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / "assets" / "app-icon.ico")))
     try:
         service = ExpenseService(ExpenseRepository(args.db))
     except (StorageError, OSError, ValueError) as exc:

@@ -3,6 +3,7 @@ from datetime import date
 from pathlib import Path
 
 from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QAbstractItemView, QComboBox, QDateEdit, QFileDialog, QFormLayout, QGroupBox,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
@@ -21,6 +22,7 @@ class ExpenseWindow(QMainWindow):
         self.selected_id = None
         self._records = {}
         self.setWindowTitle("校园消费记账")
+        self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets" / "app-icon.ico")))
         self.resize(1000, 800)
         root = QWidget()
         scroll = QScrollArea()
