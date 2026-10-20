@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="3.568" timestamp="2026-10-20T19:17:51.635789+08:00" hostname="Muxierepu"><testcase classname="tests.test_regressions" name="test_deselect_clears_old_form" time="1.739"><failure message="AssertionError: 取消选择进入新增模式时不应保留旧记录金额&#10;assert '12.50' == ''&#10;  &#10;  + 12.50">window = &lt;expense_app.ui.ExpenseWindow object at 0x000001EE9BF5F890&gt;
+
+    def test_deselect_clears_old_form(window):
+        window.table.selectRow(0)
+        assert window.selected_id is not None
+        assert window.amount_edit.text() == "12.50"
+        window.table.clearSelection()
+        assert window.selected_id is None
+&gt;       assert window.amount_edit.text() == "", "取消选择进入新增模式时不应保留旧记录金额"
+E       AssertionError: 取消选择进入新增模式时不应保留旧记录金额
+E       assert '12.50' == ''
+E         
+E         + 12.50
+
+tests\test_regressions.py:31: AssertionError</failure></testcase><testcase classname="tests.test_regressions" name="test_committed_write_then_refresh_failure_remains_visible[add]" time="0.185"><failure message="AssertionError: 写入后刷新失败不应被无条件成功状态覆盖&#10;assert ('失败' in '消费记录已新增。' or '未刷新' in '消费记录已新增。')">window = &lt;expense_app.ui.ExpenseWindow object at 0x000001EE9C378730&gt;
+dialogs = ['读取失败：测试故障']
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000001EE9BEFD940&gt;
+operation = 'add'
+
+    @pytest.mark.parametrize("operation", ["add", "update", "delete"])
+    def test_committed_write_then_refresh_failure_remains_visible(window, dialogs, monkeypatch, operation):
+        if operation in ("update", "delete"):
+            window.table.selectRow(0)
+        else:
+            window.amount_edit.setText("3.21")
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
+        def fail_report(_):
+            raise StorageError("读取失败：测试故障")
+        monkeypatch.setattr(window.service, "month_report", fail_report)
+        if operation == "delete": window.delete_record()
+        else: window.save_record()
+        assert dialogs and "读取失败" in dialogs[-1]
+        status = window.status_label.text()
+&gt;       assert "失败" in status or "未刷新" in status, "写入后刷新失败不应被无条件成功状态覆盖"
+E       AssertionError: 写入后刷新失败不应被无条件成功状态覆盖
+E       assert ('失败' in '消费记录已新增。' or '未刷新' in '消费记录已新增。')
+
+tests\test_regressions.py:49: AssertionError</failure></testcase><testcase classname="tests.test_regressions" name="test_committed_write_then_refresh_failure_remains_visible[update]" time="0.189"><failure message="AssertionError: 写入后刷新失败不应被无条件成功状态覆盖&#10;assert ('失败' in '修改已保存。' or '未刷新' in '修改已保存。')">window = &lt;expense_app.ui.ExpenseWindow object at 0x000001EE9C379B30&gt;
+dialogs = ['读取失败：测试故障']
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000001EE9C374A70&gt;
+operation = 'update'
+
+    @pytest.mark.parametrize("operation", ["add", "update", "delete"])
+    def test_committed_write_then_refresh_failure_remains_visible(window, dialogs, monkeypatch, operation):
+        if operation in ("update", "delete"):
+            window.table.selectRow(0)
+        else:
+            window.amount_edit.setText("3.21")
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
+        def fail_report(_):
+            raise StorageError("读取失败：测试故障")
+        monkeypatch.setattr(window.service, "month_report", fail_report)
+        if operation == "delete": window.delete_record()
+        else: window.save_record()
+        assert dialogs and "读取失败" in dialogs[-1]
+        status = window.status_label.text()
+&gt;       assert "失败" in status or "未刷新" in status, "写入后刷新失败不应被无条件成功状态覆盖"
+E       AssertionError: 写入后刷新失败不应被无条件成功状态覆盖
+E       assert ('失败' in '修改已保存。' or '未刷新' in '修改已保存。')
+
+tests\test_regressions.py:49: AssertionError</failure></testcase><testcase classname="tests.test_regressions" name="test_committed_write_then_refresh_failure_remains_visible[delete]" time="0.175"><failure message="AssertionError: 写入后刷新失败不应被无条件成功状态覆盖&#10;assert ('失败' in '记录已删除。' or '未刷新' in '记录已删除。')">window = &lt;expense_app.ui.ExpenseWindow object at 0x000001EE9C37B1B0&gt;
+dialogs = ['读取失败：测试故障']
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000001EE9C321040&gt;
+operation = 'delete'
+
+    @pytest.mark.parametrize("operation", ["add", "update", "delete"])
+    def test_committed_write_then_refresh_failure_remains_visible(window, dialogs, monkeypatch, operation):
+        if operation in ("update", "delete"):
+            window.table.selectRow(0)
+        else:
+            window.amount_edit.setText("3.21")
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
+        def fail_report(_):
+            raise StorageError("读取失败：测试故障")
+        monkeypatch.setattr(window.service, "month_report", fail_report)
+        if operation == "delete": window.delete_record()
+        else: window.save_record()
+        assert dialogs and "读取失败" in dialogs[-1]
+        status = window.status_label.text()
+&gt;       assert "失败" in status or "未刷新" in status, "写入后刷新失败不应被无条件成功状态覆盖"
+E       AssertionError: 写入后刷新失败不应被无条件成功状态覆盖
+E       assert ('失败' in '记录已删除。' or '未刷新' in '记录已删除。')
+
+tests\test_regressions.py:49: AssertionError</failure></testcase></testsuite></testsuites>

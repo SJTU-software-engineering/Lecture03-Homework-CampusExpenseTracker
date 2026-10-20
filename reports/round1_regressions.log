@@ -1,0 +1,114 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-9.1.1, pluggy-1.7.0 -- E:\Code\sofwar_engineing\CampusExpenseTracker\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: E:\Code\sofwar_engineing\CampusExpenseTracker
+collecting ... collected 4 items
+
+tests/test_regressions.py::test_deselect_clears_old_form FAILED          [ 25%]
+tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[add] FAILED [ 50%]
+tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[update] FAILED [ 75%]
+tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[delete] FAILED [100%]
+
+================================== FAILURES ===================================
+________________________ test_deselect_clears_old_form ________________________
+
+window = <expense_app.ui.ExpenseWindow object at 0x000001EE9BF5F890>
+
+    def test_deselect_clears_old_form(window):
+        window.table.selectRow(0)
+        assert window.selected_id is not None
+        assert window.amount_edit.text() == "12.50"
+        window.table.clearSelection()
+        assert window.selected_id is None
+>       assert window.amount_edit.text() == "", "ȡ��ѡ���������ģʽʱ��Ӧ�����ɼ�¼���"
+E       AssertionError: ȡ��ѡ���������ģʽʱ��Ӧ�����ɼ�¼���
+E       assert '12.50' == ''
+E         
+E         + 12.50
+
+tests\test_regressions.py:31: AssertionError
+_______ test_committed_write_then_refresh_failure_remains_visible[add] ________
+
+window = <expense_app.ui.ExpenseWindow object at 0x000001EE9C378730>
+dialogs = ['��ȡʧ�ܣ����Թ���']
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001EE9BEFD940>
+operation = 'add'
+
+    @pytest.mark.parametrize("operation", ["add", "update", "delete"])
+    def test_committed_write_then_refresh_failure_remains_visible(window, dialogs, monkeypatch, operation):
+        if operation in ("update", "delete"):
+            window.table.selectRow(0)
+        else:
+            window.amount_edit.setText("3.21")
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
+        def fail_report(_):
+            raise StorageError("��ȡʧ�ܣ����Թ���")
+        monkeypatch.setattr(window.service, "month_report", fail_report)
+        if operation == "delete": window.delete_record()
+        else: window.save_record()
+        assert dialogs and "��ȡʧ��" in dialogs[-1]
+        status = window.status_label.text()
+>       assert "ʧ��" in status or "δˢ��" in status, "д���ˢ��ʧ�ܲ�Ӧ���������ɹ�״̬����"
+E       AssertionError: д���ˢ��ʧ�ܲ�Ӧ���������ɹ�״̬����
+E       assert ('ʧ��' in '���Ѽ�¼��������' or 'δˢ��' in '���Ѽ�¼��������')
+
+tests\test_regressions.py:49: AssertionError
+______ test_committed_write_then_refresh_failure_remains_visible[update] ______
+
+window = <expense_app.ui.ExpenseWindow object at 0x000001EE9C379B30>
+dialogs = ['��ȡʧ�ܣ����Թ���']
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001EE9C374A70>
+operation = 'update'
+
+    @pytest.mark.parametrize("operation", ["add", "update", "delete"])
+    def test_committed_write_then_refresh_failure_remains_visible(window, dialogs, monkeypatch, operation):
+        if operation in ("update", "delete"):
+            window.table.selectRow(0)
+        else:
+            window.amount_edit.setText("3.21")
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
+        def fail_report(_):
+            raise StorageError("��ȡʧ�ܣ����Թ���")
+        monkeypatch.setattr(window.service, "month_report", fail_report)
+        if operation == "delete": window.delete_record()
+        else: window.save_record()
+        assert dialogs and "��ȡʧ��" in dialogs[-1]
+        status = window.status_label.text()
+>       assert "ʧ��" in status or "δˢ��" in status, "д���ˢ��ʧ�ܲ�Ӧ���������ɹ�״̬����"
+E       AssertionError: д���ˢ��ʧ�ܲ�Ӧ���������ɹ�״̬����
+E       assert ('ʧ��' in '�޸��ѱ��档' or 'δˢ��' in '�޸��ѱ��档')
+
+tests\test_regressions.py:49: AssertionError
+______ test_committed_write_then_refresh_failure_remains_visible[delete] ______
+
+window = <expense_app.ui.ExpenseWindow object at 0x000001EE9C37B1B0>
+dialogs = ['��ȡʧ�ܣ����Թ���']
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001EE9C321040>
+operation = 'delete'
+
+    @pytest.mark.parametrize("operation", ["add", "update", "delete"])
+    def test_committed_write_then_refresh_failure_remains_visible(window, dialogs, monkeypatch, operation):
+        if operation in ("update", "delete"):
+            window.table.selectRow(0)
+        else:
+            window.amount_edit.setText("3.21")
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
+        def fail_report(_):
+            raise StorageError("��ȡʧ�ܣ����Թ���")
+        monkeypatch.setattr(window.service, "month_report", fail_report)
+        if operation == "delete": window.delete_record()
+        else: window.save_record()
+        assert dialogs and "��ȡʧ��" in dialogs[-1]
+        status = window.status_label.text()
+>       assert "ʧ��" in status or "δˢ��" in status, "д���ˢ��ʧ�ܲ�Ӧ���������ɹ�״̬����"
+E       AssertionError: д���ˢ��ʧ�ܲ�Ӧ���������ɹ�״̬����
+E       assert ('ʧ��' in '��¼��ɾ����' or 'δˢ��' in '��¼��ɾ����')
+
+tests\test_regressions.py:49: AssertionError
+- generated xml file: E:\Code\sofwar_engineing\CampusExpenseTracker\reports\round1_regressions.xml -
+=========================== short test summary info ===========================
+FAILED tests/test_regressions.py::test_deselect_clears_old_form - AssertionEr...
+FAILED tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[add]
+FAILED tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[update]
+FAILED tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[delete]
+============================== 4 failed in 4.23s ==============================

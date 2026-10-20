@@ -1,0 +1,12 @@
+Requirement already satisfied: PyQt6==6.8.1 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from -r E:\Code\sofwar_engineing\CampusExpenseTracker\requirements.txt (line 1)) (6.8.1)
+Requirement already satisfied: PyQt6-Qt6==6.8.2 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from -r E:\Code\sofwar_engineing\CampusExpenseTracker\requirements.txt (line 2)) (6.8.2)
+Requirement already satisfied: pytest<10,>=8.3 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from -r requirements-dev.txt (line 2)) (9.1.1)
+Requirement already satisfied: PyQt6-sip<14,>=13.8 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from PyQt6==6.8.1->-r E:\Code\sofwar_engineing\CampusExpenseTracker\requirements.txt (line 1)) (13.13.0)
+Requirement already satisfied: colorama>=0.4 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from pytest<10,>=8.3->-r requirements-dev.txt (line 2)) (0.4.6)
+Requirement already satisfied: iniconfig>=1.0.1 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from pytest<10,>=8.3->-r requirements-dev.txt (line 2)) (2.3.1)
+Requirement already satisfied: packaging>=22 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from pytest<10,>=8.3->-r requirements-dev.txt (line 2)) (26.3)
+Requirement already satisfied: pluggy<2,>=1.5 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from pytest<10,>=8.3->-r requirements-dev.txt (line 2)) (1.7.0)
+Requirement already satisfied: pygments>=2.7.2 in e:\code\sofwar_engineing\campusexpensetracker\.venv\lib\site-packages (from pytest<10,>=8.3->-r requirements-dev.txt (line 2)) (2.21.0)
+
+[notice] A new release of pip is available: 25.2 -> 26.2.1
+[notice] To update, run: E:\Code\sofwar_engineing\CampusExpenseTracker\.venv\Scripts\python.exe -m pip install --upgrade pip

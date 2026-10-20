@@ -1,0 +1,13 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-9.1.1, pluggy-1.7.0 -- E:\Code\sofwar_engineing\CampusExpenseTracker\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: E:\Code\sofwar_engineing\CampusExpenseTracker
+collecting ... collected 4 items
+
+tests/test_regressions.py::test_deselect_clears_old_form PASSED          [ 25%]
+tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[add] PASSED [ 50%]
+tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[update] PASSED [ 75%]
+tests/test_regressions.py::test_committed_write_then_refresh_failure_remains_visible[delete] PASSED [100%]
+
+- generated xml file: E:\Code\sofwar_engineing\CampusExpenseTracker\reports\round2_regressions.xml -
+============================== 4 passed in 0.70s ==============================
