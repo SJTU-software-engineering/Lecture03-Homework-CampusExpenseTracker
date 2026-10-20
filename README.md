@@ -93,7 +93,7 @@ CodeWriter 负责业务实现，CodeReviewer 独立审查，TestEngineer 编写�
 - [最终代码审查报告](reports/code_review.md)。
 - [课堂演示与用户验收步骤](docs/demo_checklist.md)。
 
-博客稿为本地 Markdown 文件，尚未自动发布；本项目也没有自动创建远程仓库。
+博客稿为 Markdown 文件，尚未发布到个人博客。项目公开仓库：[SJTU-software-engineering/CampusExpenseTracker](https://github.com/SJTU-software-engineering/CampusExpenseTracker)。
 
 运行下列脚本可用临时合成数据生成真实 Qt 窗口预览，不影响正式账本：
 
