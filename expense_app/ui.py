@@ -20,7 +20,7 @@ class ExpenseWindow(QMainWindow):
         self.selected_id = None
         self._records = {}
         self.setWindowTitle("校园消费记账")
-        self.resize(1000, 740)
+        self.resize(1000, 850)
         root = QWidget()
         self.setCentralWidget(root)
         layout = QVBoxLayout(root)
@@ -41,6 +41,26 @@ class ExpenseWindow(QMainWindow):
         self.total_label = QLabel()
         toolbar.addWidget(self.total_label)
         layout.addLayout(toolbar)
+
+        budget_box = QGroupBox("当前查看月份预算（应用内提醒）")
+        budget_layout = QVBoxLayout(budget_box)
+        budget_controls = QHBoxLayout()
+        self.budget_edit = QLineEdit()
+        self.budget_edit.setMaxLength(20)
+        self.budget_edit.setPlaceholderText("预算金额（元），例如 1500.00")
+        self.budget_save_button = QPushButton("设置 / 更新月预算")
+        self.budget_clear_button = QPushButton("清除当前月预算")
+        budget_controls.addWidget(self.budget_edit)
+        budget_controls.addWidget(self.budget_save_button)
+        budget_controls.addWidget(self.budget_clear_button)
+        budget_layout.addLayout(budget_controls)
+        self.budget_label = QLabel("月预算：读取中")
+        self.budget_label.setWordWrap(True)
+        self.budget_warning_label = QLabel()
+        self.budget_warning_label.setWordWrap(True)
+        budget_layout.addWidget(self.budget_label)
+        budget_layout.addWidget(self.budget_warning_label)
+        layout.addWidget(budget_box)
 
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(["日期", "分类", "金额（元）", "备注", "记录编号"])
@@ -94,6 +114,8 @@ class ExpenseWindow(QMainWindow):
         self.save_button.clicked.connect(self.save_record)
         self.new_button.clicked.connect(self.reset_form)
         self.delete_button.clicked.connect(self.delete_record)
+        self.budget_save_button.clicked.connect(self.save_budget)
+        self.budget_clear_button.clicked.connect(self.clear_budget)
         self.reset_form()
         self.refresh()
 
@@ -132,11 +154,15 @@ class ExpenseWindow(QMainWindow):
         self.reset_form()
         try:
             report = self.service.month_report(self.current_month())
+            budget_status = self.service.budget_status(self.current_month(), report.total_cents)
         except (StorageError, ValidationError) as exc:
             self._records = {}
             self.table.setRowCount(0)
             self.total_label.setText("月总支出：读取失败")
             self.stats_label.setText("分类统计：读取失败")
+            self.budget_label.setText("月预算与提醒：读取失败，当前状态未知")
+            self.budget_warning_label.clear()
+            self.budget_edit.clear()
             self.show_error(exc)
             return False
         self.table.blockSignals(True)
@@ -153,8 +179,52 @@ class ExpenseWindow(QMainWindow):
             self.table.blockSignals(False)
         self.total_label.setText(f"月总支出：¥ {format_amount(report.total_cents)}")
         self.stats_label.setText("分类统计：" + "　".join(f"{category} ¥{format_amount(total)}" for category, total in report.category_totals.items()))
+        self.show_budget_status(budget_status)
         self.status_label.setText(f"{self.current_month()} 共 {len(report.records)} 条记录；当前为新增模式。")
         return True
+
+    def show_budget_status(self, status):
+        if status.budget_cents is None:
+            self.budget_edit.clear()
+            self.budget_label.setText(f"{self.current_month()} 未设置月预算；全月支出 ¥{format_amount(status.spent_cents)}；剩余额度：未设置")
+            self.budget_warning_label.setText("设置预算后，将在达到 80%、达到 100% 及超支时显示应用内提示。")
+            return
+        self.budget_edit.setText(format_amount(status.budget_cents))
+        balance = (f"超支 ¥{format_amount(-status.remaining_cents)}" if status.remaining_cents < 0
+                   else f"剩余 ¥{format_amount(status.remaining_cents)}")
+        self.budget_label.setText(
+            f"{self.current_month()} 月预算 ¥{format_amount(status.budget_cents)}；"
+            f"全月支出 ¥{format_amount(status.spent_cents)}；{balance}"
+        )
+        messages = {
+            "normal": "预算使用正常，尚未达到 80%。",
+            "near": "接近月预算：已达到 80%，尚未用完。",
+            "exhausted": "月预算已用完：支出达到 100%。",
+            "over": "月预算已超支，请关注后续支出。",
+        }
+        self.budget_warning_label.setText(messages[status.level])
+
+    def save_budget(self):
+        try:
+            self.service.set_budget(self.current_month(), self.budget_edit.text())
+        except (StorageError, ValidationError) as exc:
+            self.show_error(exc)
+            return
+        if self.refresh():
+            self.status_label.setText("当前月预算已保存，提醒已更新。")
+        else:
+            self.status_label.setText(f"预算写入已完成，但刷新失败：{self.status_label.text()} 请刷新流水重试，无需重复设置。")
+
+    def clear_budget(self):
+        try:
+            self.service.clear_budget(self.current_month())
+        except (StorageError, ValidationError) as exc:
+            self.show_error(exc)
+            return
+        if self.refresh():
+            self.status_label.setText("当前月预算已清除，消费流水保留。")
+        else:
+            self.status_label.setText(f"预算清除已完成，但刷新失败：{self.status_label.text()} 请刷新流水重试，无需重复清除。")
 
     def load_selection(self):
         selected = self.table.selectedItems()

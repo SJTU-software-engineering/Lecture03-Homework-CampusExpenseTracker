@@ -20,5 +20,13 @@ class MonthReport:
     category_totals: dict[str, int]
 
 
+@dataclass(frozen=True)
+class BudgetStatus:
+    budget_cents: int | None
+    spent_cents: int
+    remaining_cents: int | None
+    level: str  # unset / normal / near / exhausted / over
+
+
 def format_amount(cents: int) -> str:
     return f"{cents // 100}.{cents % 100:02d}"

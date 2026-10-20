@@ -3,7 +3,7 @@ import re
 from datetime import date
 from decimal import Decimal
 
-from .models import CATEGORIES, MonthReport
+from .models import BudgetStatus, CATEGORIES, MonthReport
 from .repository import ExpenseRepository
 
 MIN_DATE = date(1900, 1, 1)
@@ -65,6 +65,25 @@ def validate_id(expense_id: int) -> None:
         raise ValidationError("请先选择一条有效记录。")
 
 
+def calculate_budget_status(budget_cents: int | None, spent_cents: int) -> BudgetStatus:
+    """用整数比较精确判断 80% / 100% 边界，None 表示未设置预算。"""
+    if type(spent_cents) is not int or spent_cents < 0:
+        raise ValidationError("支出总额须为非负整数分。")
+    if budget_cents is None:
+        return BudgetStatus(None, spent_cents, None, "unset")
+    if type(budget_cents) is not int or not 1 <= budget_cents <= MAX_AMOUNT_CENTS:
+        raise ValidationError("预算金额无效。")
+    if spent_cents > budget_cents:
+        level = "over"
+    elif spent_cents == budget_cents:
+        level = "exhausted"
+    elif spent_cents * 100 >= budget_cents * 80:
+        level = "near"
+    else:
+        level = "normal"
+    return BudgetStatus(budget_cents, spent_cents, budget_cents - spent_cents, level)
+
+
 class ExpenseService:
     def __init__(self, repository: ExpenseRepository):
         self.repository = repository
@@ -75,6 +94,25 @@ class ExpenseService:
         for record in records:
             totals[record.category] += record.amount_cents
         return MonthReport(records, sum(totals.values()), totals)
+
+    def set_budget(self, month: str, amount: str) -> None:
+        month_bounds(month)
+        self.repository.set_budget(month, parse_amount(amount))
+
+    def get_budget(self, month: str) -> int | None:
+        month_bounds(month)
+        return self.repository.get_budget(month)
+
+    def clear_budget(self, month: str) -> None:
+        month_bounds(month)
+        self.repository.clear_budget(month)
+
+    def budget_status(self, month: str, spent_cents: int | None = None) -> BudgetStatus:
+        """可传入刚读取的全月支出，避免界面刷新时重复查询流水。"""
+        budget = self.get_budget(month)
+        if spent_cents is None:
+            spent_cents = self.month_report(month).total_cents
+        return calculate_budget_status(budget, spent_cents)
 
     def add_expense(self, day: str, category: str, amount: str, note: str = "") -> int:
         return self.repository.add(*validate_record(day, category, amount, note))

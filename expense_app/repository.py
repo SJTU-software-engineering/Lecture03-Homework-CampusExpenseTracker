@@ -26,6 +26,12 @@ class ExpenseRepository:
                     )
                 """)
                 connection.execute("CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)")
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS monthly_budgets (
+                        month TEXT PRIMARY KEY NOT NULL,
+                        amount_cents INTEGER NOT NULL CHECK(typeof(amount_cents) = 'integer' AND amount_cents > 0 AND amount_cents <= 99999999)
+                    )
+                """)
         except (sqlite3.Error, OSError) as exc:
             raise StorageError("无法初始化数据库，请检查路径、写入权限及数据库文件格式。") from exc
 
@@ -79,3 +85,29 @@ class ExpenseRepository:
                 return connection.execute("DELETE FROM expenses WHERE id=?", (expense_id,)).rowcount == 1
         except sqlite3.Error as exc:
             raise StorageError("删除消费记录失败，请检查数据库权限或稍后重试。") from exc
+
+    def get_budget(self, month: str) -> int | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute("SELECT amount_cents FROM monthly_budgets WHERE month=?", (month,)).fetchone()
+                return None if row is None else row["amount_cents"]
+        except sqlite3.Error as exc:
+            raise StorageError("读取月预算失败，请检查数据库是否可用。") from exc
+
+    def set_budget(self, month: str, amount_cents: int) -> None:
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    "INSERT INTO monthly_budgets(month, amount_cents) VALUES (?, ?) "
+                    "ON CONFLICT(month) DO UPDATE SET amount_cents=excluded.amount_cents",
+                    (month, amount_cents),
+                )
+        except sqlite3.Error as exc:
+            raise StorageError("保存月预算失败，请检查数据库权限或稍后重试。") from exc
+
+    def clear_budget(self, month: str) -> None:
+        try:
+            with self._connect() as connection:
+                connection.execute("DELETE FROM monthly_budgets WHERE month=?", (month,))
+        except sqlite3.Error as exc:
+            raise StorageError("清除月预算失败，请检查数据库权限或稍后重试。") from exc
