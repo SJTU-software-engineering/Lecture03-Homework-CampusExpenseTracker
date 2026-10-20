@@ -1,4 +1,4 @@
-# 校园消费记账
+# 第三讲课后作业：校园消费记账 GUI
 
 基于 Python 3.10+、PyQt6 和 SQLite 的中文桌面作业。记录消费日期、分类、金额与备注，支持新增、选择记录编辑、确认删除、按月份查看流水、月总支出及六类消费统计。数据保存在本地，退出重启后保留。
 
@@ -93,7 +93,7 @@ CodeWriter 负责业务实现，CodeReviewer 独立审查，TestEngineer 编写�
 - [最终代码审查报告](reports/code_review.md)。
 - [课堂演示与用户验收步骤](docs/demo_checklist.md)。
 
-博客稿为 Markdown 文件，尚未发布到个人博客。项目公开仓库：[SJTU-software-engineering/CampusExpenseTracker](https://github.com/SJTU-software-engineering/CampusExpenseTracker)。
+博客稿为 Markdown 文件，尚未发布到个人博客。项目公开仓库：[第三讲课后作业：校园消费记账 GUI](https://github.com/SJTU-software-engineering/Lecture03-Homework-CampusExpenseTracker)。
 
 运行下列脚本可用临时合成数据生成真实 Qt 窗口预览，不影响正式账本：
 
