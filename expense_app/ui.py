@@ -105,7 +105,12 @@ class ExpenseWindow(QMainWindow):
         QMessageBox.warning(self, "操作未完成", str(error))
 
     def reset_form(self):
-        self.table.clearSelection()
+        # 清除选择会发出 itemSelectionChanged；暂时屏蔽以避免再次重置表单。
+        was_blocked = self.table.blockSignals(True)
+        try:
+            self.table.clearSelection()
+        finally:
+            self.table.blockSignals(was_blocked)
         self.selected_id = None
         self.form_state_label.setText("新增模式（选择流水中的一条记录可编辑）")
         self.save_button.setText("新增记录")
@@ -121,10 +126,9 @@ class ExpenseWindow(QMainWindow):
         self.note_edit.clear()
 
     def month_changed(self):
-        self.reset_form()
         self.refresh()
 
-    def refresh(self):
+    def refresh(self) -> bool:
         self.reset_form()
         try:
             report = self.service.month_report(self.current_month())
@@ -134,7 +138,7 @@ class ExpenseWindow(QMainWindow):
             self.total_label.setText("月总支出：读取失败")
             self.stats_label.setText("分类统计：读取失败")
             self.show_error(exc)
-            return
+            return False
         self.table.blockSignals(True)
         try:
             self.table.setRowCount(len(report.records))
@@ -150,14 +154,12 @@ class ExpenseWindow(QMainWindow):
         self.total_label.setText(f"月总支出：¥ {format_amount(report.total_cents)}")
         self.stats_label.setText("分类统计：" + "　".join(f"{category} ¥{format_amount(total)}" for category, total in report.category_totals.items()))
         self.status_label.setText(f"{self.current_month()} 共 {len(report.records)} 条记录；当前为新增模式。")
+        return True
 
     def load_selection(self):
         selected = self.table.selectedItems()
         if not selected:
-            self.selected_id = None
-            self.save_button.setText("新增记录")
-            self.delete_button.setEnabled(False)
-            self.form_state_label.setText("新增模式（选择流水中的一条记录可编辑）")
+            self.reset_form()
             return
         record = self._records.get(selected[0].data(Qt.ItemDataRole.UserRole))
         if record is None:
@@ -186,8 +188,12 @@ class ExpenseWindow(QMainWindow):
         self.month_edit.blockSignals(True)
         self.month_edit.setDate(QDate.fromString(day[:7] + "-01", "yyyy-MM-dd"))
         self.month_edit.blockSignals(False)
-        self.refresh()
-        self.status_label.setText("修改已保存。" if editing else "消费记录已新增。")
+        if self.refresh():
+            self.status_label.setText("修改已保存。" if editing else "消费记录已新增。")
+        else:
+            self.status_label.setText(
+                f"写入已完成，但刷新失败：{self.status_label.text()} 请点击“刷新流水”重试，无需重复保存。"
+            )
 
     def delete_record(self):
         if self.selected_id is None:
@@ -205,5 +211,9 @@ class ExpenseWindow(QMainWindow):
         except (StorageError, ValidationError) as exc:
             self.show_error(exc)
             return
-        self.refresh()
-        self.status_label.setText("记录已删除。")
+        if self.refresh():
+            self.status_label.setText("记录已删除。")
+        else:
+            self.status_label.setText(
+                f"写入已完成，但刷新失败：{self.status_label.text()} 请点击“刷新流水”重试，无需重复删除。"
+            )
