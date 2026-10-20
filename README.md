@@ -74,4 +74,29 @@ CSV 使用 UTF-8 BOM 编码，列为日期、分类、金额（元）、备注�
 
 ## 验证说明
 
-本轮 CodeWriter 仅编写业务代码并做基础语法自检，单元测试和测试报告由独立 TestEngineer 提供。建议覆盖金额精度、日期/月边界、输入限制、CRUD 持久化、跨月编辑、空月汇总、删除取消、参数化 SQL 与数据库错误展示。
+CodeWriter 负责业务实现，CodeReviewer 独立审查，TestEngineer 编写并运行测试。最终 **177/177 测试通过**，覆盖金额精度、日期/月边界、输入限制、CRUD 持久化、预算阈值、分类筛选、CSV 文件保护、删除取消及数据库错误展示。Qt 功能测试使用 offscreen 平台；不代表原生 Windows 人工操作、不同 DPI 或压力测试已经完成。
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -v --junitxml=reports/junit.xml
+```
+
+测试使用临时数据库，不读写正式账本。初版的 4 条失败回归与后续通过日志分别保留，没有覆盖初版失败证据；第三轮还记录并纠正了一处测试自身的算术预期错误。
+
+## 作业提交材料
+
+- [博客提交稿](docs/blog_post.md)：迭代经过、验证说明与心得参考；发布前请结合自己的实际体验确认心得。
+- [完整迭代记录](docs/iteration_log.md)和 [实际开发提示词](docs/prompts/round1.txt)：4 轮过程，明确区分用户原始要求与主控代拟指令。
+- [完整测试报告](reports/test_report.md)、[逐条测试输出](reports/pytest_output.txt)、[JUnit XML](reports/junit.xml)。
+- [最终代码审查报告](reports/code_review.md)。
+- [课堂演示与用户验收步骤](docs/demo_checklist.md)。
+
+博客稿为本地 Markdown 文件，尚未自动发布；本项目也没有自动创建远程仓库。
+
+运行下列脚本可用临时合成数据生成真实 Qt 窗口预览，不影响正式账本：
+
+```powershell
+.\.venv\Scripts\python.exe tools/render_preview.py
+```
+
+![校园消费记账合成数据预览](reports/app_preview.png)
