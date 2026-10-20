@@ -1,9 +1,13 @@
 """输入校验与月度统计，独立于 Qt。"""
 import re
+import csv
+import os
+import tempfile
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
-from .models import BudgetStatus, CATEGORIES, MonthReport
+from .models import BudgetStatus, CATEGORIES, Expense, MonthReport, format_amount
 from .repository import ExpenseRepository
 
 MIN_DATE = date(1900, 1, 1)
@@ -13,6 +17,22 @@ MAX_AMOUNT_CENTS = 99_999_999
 
 class ValidationError(Exception):
     """用户可以修正的输入错误。"""
+
+
+class ExportError(Exception):
+    """导出路径或文件写入错误。"""
+
+
+def filter_records(records: tuple[Expense, ...], category: str | None = None) -> tuple[Expense, ...]:
+    if category is not None and category not in CATEGORIES:
+        raise ValidationError("请选择全部分类或有效的消费分类。")
+    return tuple(record for record in records if category is None or record.category == category)
+
+
+def safe_csv_note(note: str) -> str:
+    """保留原文本，在可能被电子表格识别为公式的备注前添加单引号。"""
+    stripped = note.lstrip()
+    return "'" + note if stripped.startswith(("=", "+", "-", "@")) else note
 
 
 def parse_amount(text: str) -> int:
@@ -94,6 +114,45 @@ class ExpenseService:
         for record in records:
             totals[record.category] += record.amount_cents
         return MonthReport(records, sum(totals.values()), totals)
+
+    def filtered_expenses(self, month: str, category: str | None = None) -> tuple[Expense, ...]:
+        return filter_records(self.month_report(month).records, category)
+
+    def export_csv(self, month: str, category: str | None, path: str | Path) -> int:
+        """导出当前范围，返回条数；调用方负责现有文件覆盖确认。"""
+        records = self.filtered_expenses(month, category)
+        temporary_path = None
+        try:
+            target = Path(path).expanduser()
+            if target.suffix.lower() != ".csv":
+                raise ExportError("导出文件必须使用 .csv 后缀。")
+            target = target.resolve()
+            database = self.repository.db_path.resolve()
+            if target == database or (target.exists() and os.path.samefile(target, database)):
+                raise ExportError("不能将 CSV 导出到当前数据库文件，请选择其他路径。")
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8-sig", newline="", delete=False,
+                dir=target.parent, prefix=".expense-export-", suffix=".tmp",
+            ) as output:
+                temporary_path = Path(output.name)
+                writer = csv.writer(output)
+                writer.writerow(("日期", "分类", "金额（元）", "备注", "记录编号"))
+                for record in records:
+                    writer.writerow((record.expense_date, record.category, format_amount(record.amount_cents),
+                                     safe_csv_note(record.note), record.id))
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(temporary_path, target)
+            temporary_path = None
+            return len(records)
+        except (OSError, UnicodeError, ValueError, TypeError, csv.Error) as exc:
+            raise ExportError("CSV 导出失败，请检查路径、文件占用、权限及文本编码。") from exc
+        finally:
+            if temporary_path is not None:
+                try:
+                    temporary_path.unlink(missing_ok=True)
+                except OSError as exc:
+                    raise ExportError(f"导出失败，且无法清理临时文件：{temporary_path}。请检查文件权限。") from exc
 
     def set_budget(self, month: str, amount: str) -> None:
         month_bounds(month)

@@ -1,16 +1,17 @@
 """中文桌面界面；输入错误与数据库错误通过对话框可见。"""
 from datetime import date
+from pathlib import Path
 
 from PyQt6.QtCore import QDate, Qt
 from PyQt6.QtWidgets import (
-    QAbstractItemView, QComboBox, QDateEdit, QFormLayout, QGroupBox,
+    QAbstractItemView, QComboBox, QDateEdit, QFileDialog, QFormLayout, QGroupBox,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
+    QPushButton, QScrollArea, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from .models import CATEGORIES, format_amount
 from .repository import StorageError
-from .service import ValidationError
+from .service import ExportError, ValidationError, filter_records
 
 
 class ExpenseWindow(QMainWindow):
@@ -20,9 +21,12 @@ class ExpenseWindow(QMainWindow):
         self.selected_id = None
         self._records = {}
         self.setWindowTitle("校园消费记账")
-        self.resize(1000, 850)
+        self.resize(1000, 800)
         root = QWidget()
-        self.setCentralWidget(root)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(root)
+        self.setCentralWidget(scroll)
         layout = QVBoxLayout(root)
         title = QLabel("校园消费记账")
         title.setStyleSheet("font-size: 26px; font-weight: bold; color: #245d96;")
@@ -37,6 +41,14 @@ class ExpenseWindow(QMainWindow):
         toolbar.addWidget(self.month_edit)
         self.refresh_button = QPushButton("刷新流水")
         toolbar.addWidget(self.refresh_button)
+        toolbar.addWidget(QLabel("流水分类"))
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItem("全部分类", None)
+        for category in CATEGORIES:
+            self.filter_combo.addItem(category, category)
+        toolbar.addWidget(self.filter_combo)
+        self.export_button = QPushButton("导出当前范围 CSV")
+        toolbar.addWidget(self.export_button)
         toolbar.addStretch()
         self.total_label = QLabel()
         toolbar.addWidget(self.total_label)
@@ -63,6 +75,7 @@ class ExpenseWindow(QMainWindow):
         layout.addWidget(budget_box)
 
         self.table = QTableWidget(0, 5)
+        self.table.setMinimumHeight(140)
         self.table.setHorizontalHeaderLabels(["日期", "分类", "金额（元）", "备注", "记录编号"])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -71,6 +84,9 @@ class ExpenseWindow(QMainWindow):
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.table.setColumnHidden(4, True)
         layout.addWidget(self.table)
+        self.filtered_total_label = QLabel()
+        self.filtered_total_label.setWordWrap(True)
+        layout.addWidget(self.filtered_total_label)
         self.stats_label = QLabel()
         self.stats_label.setWordWrap(True)
         layout.addWidget(self.stats_label)
@@ -116,6 +132,8 @@ class ExpenseWindow(QMainWindow):
         self.delete_button.clicked.connect(self.delete_record)
         self.budget_save_button.clicked.connect(self.save_budget)
         self.budget_clear_button.clicked.connect(self.clear_budget)
+        self.filter_combo.currentIndexChanged.connect(self.refresh)
+        self.export_button.clicked.connect(self.export_current)
         self.reset_form()
         self.refresh()
 
@@ -155,11 +173,13 @@ class ExpenseWindow(QMainWindow):
         try:
             report = self.service.month_report(self.current_month())
             budget_status = self.service.budget_status(self.current_month(), report.total_cents)
+            visible_records = filter_records(report.records, self.filter_combo.currentData())
         except (StorageError, ValidationError) as exc:
             self._records = {}
             self.table.setRowCount(0)
             self.total_label.setText("月总支出：读取失败")
             self.stats_label.setText("分类统计：读取失败")
+            self.filtered_total_label.setText("当前筛选：读取失败")
             self.budget_label.setText("月预算与提醒：读取失败，当前状态未知")
             self.budget_warning_label.clear()
             self.budget_edit.clear()
@@ -167,9 +187,9 @@ class ExpenseWindow(QMainWindow):
             return False
         self.table.blockSignals(True)
         try:
-            self.table.setRowCount(len(report.records))
-            self._records = {record.id: record for record in report.records}
-            for row, record in enumerate(report.records):
+            self.table.setRowCount(len(visible_records))
+            self._records = {record.id: record for record in visible_records}
+            for row, record in enumerate(visible_records):
                 values = (record.expense_date, record.category, format_amount(record.amount_cents), record.note, str(record.id))
                 for column, text in enumerate(values):
                     item = QTableWidgetItem(text)
@@ -178,10 +198,35 @@ class ExpenseWindow(QMainWindow):
         finally:
             self.table.blockSignals(False)
         self.total_label.setText(f"月总支出：¥ {format_amount(report.total_cents)}")
+        self.filtered_total_label.setText(
+            f"当前筛选：{self.filter_combo.currentText()}，{len(visible_records)} 条；"
+            f"小计 ¥{format_amount(sum(record.amount_cents for record in visible_records))}。月总支出与预算始终按全月计算。"
+        )
         self.stats_label.setText("分类统计：" + "　".join(f"{category} ¥{format_amount(total)}" for category, total in report.category_totals.items()))
         self.show_budget_status(budget_status)
         self.status_label.setText(f"{self.current_month()} 共 {len(report.records)} 条记录；当前为新增模式。")
         return True
+
+    def export_current(self):
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "导出当前月份与分类流水", f"消费流水_{self.current_month()}_{self.filter_combo.currentText()}.csv",
+            "CSV 文件 (*.csv)", options=QFileDialog.Option.DontConfirmOverwrite,
+        )
+        if not filename:
+            return
+        try:
+            if Path(filename).exists():
+                answer = QMessageBox.question(
+                    self, "确认覆盖", "目标文件已存在，确定覆盖吗？",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No,
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+            count = self.service.export_csv(self.current_month(), self.filter_combo.currentData(), filename)
+        except (StorageError, ValidationError, ExportError, OSError, ValueError) as exc:
+            self.show_error(exc)
+            return
+        self.status_label.setText(f"CSV 已导出：{count} 条记录" + ("（空结果，仅包含表头）。" if count == 0 else "。"))
 
     def show_budget_status(self, status):
         if status.budget_cents is None:
